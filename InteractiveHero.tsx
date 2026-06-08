@@ -33,7 +33,7 @@ const playSwipeSound = (speed: number) => {
 
 // Голографический неоновый кактус (Wireframe)
 const HologramCactusSVG = ({ className, color }: { className?: string, color: string }) => (
- <svg viewBox="0 0 400 600" className={`w-full h-full ${className}`} xmlns="http://www.w3.org/2000/svg">
+ <svg viewBox="0 0 400 600" className={`w-full h-full ${className}`} preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
   <defs>
    <filter id={`glow-${color}`}>
     <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
@@ -76,8 +76,8 @@ export const InteractiveHero: React.FC = () => {
  const containerRef = useRef<HTMLDivElement>(null);
  const objectRef = useRef<HTMLDivElement>(null);
   
- // Состояние вращения
- const manualRotation = useRef({ x: 0, y: 0 });
+ // Состояние вращения (добавлен небольшой начальный наклон по X для подчеркивания 3D объема)
+ const manualRotation = useRef({ x: -10, y: 0 });
  const isDragging = useRef(false);
  const lastPos = useRef({ x: 0, y: 0 });
  const lastSoundTime = useRef(0);
@@ -186,7 +186,12 @@ export const InteractiveHero: React.FC = () => {
    {/* 3D Контейнер (без overflow-hidden, чтобы не ломать 3D в Safari/WebKit) */}
    <div
     className="absolute inset-0 flex items-center justify-center z-10"
-    style={{ perspective: '1000px', WebkitPerspective: '1000px' }}
+    style={{ 
+     perspective: '800px', 
+     WebkitPerspective: '800px',
+     transformStyle: 'preserve-3d',
+     WebkitTransformStyle: 'preserve-3d'
+    }}
     onMouseMove={handleMouseMove}
     onMouseLeave={handleMouseLeave}
     onTouchStart={handlePointerDown}
@@ -196,20 +201,20 @@ export const InteractiveHero: React.FC = () => {
     {/* Контейнер 3D объекта */}
     <div 
      ref={objectRef}
-     className="relative flex items-center justify-center transition-transform duration-75 ease-out"
+     className="relative flex items-center justify-center transition-transform duration-75 ease-out w-full h-full"
      style={{ 
       transformStyle: 'preserve-3d', 
       WebkitTransformStyle: 'preserve-3d',
       willChange: 'transform',
-      transform: `rotateX(0deg) rotateY(0deg)`
+      transform: `rotateX(-10deg) rotateY(0deg)`
      }}
     >
      {/* 
       Анимация постоянного вращения + ручное вращение.
-      Размеры увеличены для мобильных устройств.
+      Используем aspect-ratio и высоту в vh, чтобы объект не сплющивался на мобильных.
      */}
      <div 
-      className="relative w-[300px] h-[450px] sm:w-[350px] sm:h-[525px] md:w-[450px] md:h-[675px] animate-spin-3d flex-shrink-0" 
+      className="relative h-[55vh] max-h-[600px] aspect-[2/3] animate-spin-3d flex-shrink-0" 
       style={{ 
        transformStyle: 'preserve-3d',
        WebkitTransformStyle: 'preserve-3d'
@@ -224,7 +229,9 @@ export const InteractiveHero: React.FC = () => {
          WebkitTransform: `rotateY(${plane.deg}deg)`,
          mixBlendMode: 'screen',
          backfaceVisibility: 'visible',
-         WebkitBackfaceVisibility: 'visible'
+         WebkitBackfaceVisibility: 'visible',
+         transformStyle: 'preserve-3d',
+         WebkitTransformStyle: 'preserve-3d'
         }}
        >
         <HologramCactusSVG color={plane.color} />
