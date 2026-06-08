@@ -317,11 +317,6 @@ export const InteractiveHero: React.FC = () => {
      </g>
     </svg>
    </div>
-    
-   {/* Подсказка */}
-   <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-mex-green font-mono text-sm opacity-70 pointer-events-none animate-pulse tracking-widest z-20 whitespace-nowrap">
-    [ TILT DEVICE OR SWIPE ]
-   </div>
   </div>
  );
 };
