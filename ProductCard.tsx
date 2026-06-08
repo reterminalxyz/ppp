@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Product } from '../types';
+import { Product } from './types';
 
 interface Props {
   product: Product;
@@ -24,7 +24,6 @@ export const ProductCard: React.FC<Props> = ({ product, onAddToCart }) => {
 
   return (
     <div className="group relative bg-mex-dark border-4 border-mex-red p-4 transition-all duration-300 hover:-translate-y-2 hover:shadow-solid-pink flex flex-col h-full">
-      {/* Image Container */}
       <div className="border-2 border-mex-orange mb-4 relative overflow-hidden">
         <div className="relative overflow-hidden aspect-square group/gallery bg-black flex items-center justify-center">
           {!imageError ? (
@@ -42,7 +41,6 @@ export const ProductCard: React.FC<Props> = ({ product, onAddToCart }) => {
             </div>
           )}
           
-          {/* Gallery Arrows - Only show if there are multiple images */}
           {product.images.length > 1 && (
             <>
               <button 
@@ -62,7 +60,6 @@ export const ProductCard: React.FC<Props> = ({ product, onAddToCart }) => {
             </>
           )}
 
-          {/* Scanline overlay */}
           <div className="absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px] pointer-events-none"></div>
         </div>
       </div>
