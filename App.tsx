@@ -154,20 +154,20 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-checkerboard font-sans selection:bg-mex-pink selection:text-white">
       <AcidTrails />
       
-      {/* Navigation */}
-      <nav className="fixed top-0 w-full z-30 bg-mex-dark/90 backdrop-blur-md border-b-2 border-mex-orange p-4 flex justify-between items-center">
-        <div className="text-mex-orange font-black text-xl md:text-2xl tracking-tighter uppercase drop-shadow-[0_0_8px_rgba(255,140,0,0.8)] min-h-[32px]">
+      {/* Navigation - Optimized for Mobile */}
+      <nav className="fixed top-0 w-full z-30 bg-mex-dark/90 backdrop-blur-md border-b-2 border-mex-orange p-3 sm:p-4 flex justify-between items-center">
+        <div className="text-mex-orange font-black text-xs sm:text-sm md:text-2xl tracking-tighter uppercase drop-shadow-[0_0_8px_rgba(255,140,0,0.8)] min-h-[24px] flex-1 mr-2 truncate">
           <span className="glitch-occasional" data-text={headerText + "_"}>
             {headerText}
             <span className="animate-pulse">_</span>
           </span>
         </div>
         
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-3 sm:gap-6">
           {/* Cart Button */}
           <button 
             onClick={() => setIsCartOpen(true)}
-            className="text-mex-pink font-bold font-mono text-xl hover:text-mex-green transition-colors drop-shadow-[0_0_5px_currentColor]"
+            className="text-mex-pink font-bold font-mono text-xs sm:text-sm md:text-xl hover:text-mex-green transition-colors drop-shadow-[0_0_5px_currentColor] whitespace-nowrap"
           >
             CART [{cartItemCount}]
           </button>
@@ -175,12 +175,12 @@ const App: React.FC = () => {
           {/* Schematic Cactus Menu Button */}
           <button 
             onClick={() => setIsMenuOpen(true)}
-            className="relative flex items-center justify-center w-14 h-14 group transition-transform duration-300 hover:scale-110"
+            className="relative flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 md:w-14 md:h-14 group transition-transform duration-300 hover:scale-110 flex-shrink-0"
             aria-label="Open Menu"
           >
             <svg 
-              width="36" 
-              height="36" 
+              width="100%" 
+              height="100%" 
               viewBox="0 0 24 24" 
               fill="none" 
               stroke="currentColor" 
@@ -199,7 +199,7 @@ const App: React.FC = () => {
       </nav>
 
       {/* Main Content */}
-      <main className="pt-20">
+      <main className="pt-16 sm:pt-20">
         <InteractiveHero />
 
         {/* Marquee Divider */}
