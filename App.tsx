@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { InteractiveHero } from './components/InteractiveHero';
-import { ProductCard } from './components/ProductCard';
-import { Menu } from './components/Menu';
-import { Cart } from './components/Cart';
-import { Gallery } from './components/Gallery';
+import { InteractiveHero } from './InteractiveHero';
+import { ProductCard } from './ProductCard';
+import { Menu } from './Menu';
+import { Cart } from './Cart';
+import { Gallery } from './Gallery';
 import { products } from './data';
 import { Product, CartItem } from './types';
 
