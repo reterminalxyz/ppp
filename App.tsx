@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { InteractiveHero } from './InteractiveHero';
-import { ProductCard } from './ProductCard';
-import { Menu } from './Menu';
-import { Cart } from './Cart';
-import { Gallery } from './Gallery';
+import { InteractiveHero } from './components/InteractiveHero';
+import { ProductCard } from './components/ProductCard';
+import { Menu } from './components/Menu';
+import { Cart } from './components/Cart';
+import { Gallery } from './components/Gallery';
 import { products } from './data';
 import { Product, CartItem } from './types';
 
@@ -37,6 +37,26 @@ const playFunnySound = () => {
 
   osc.start();
   osc.stop(audioCtx.currentTime + 0.15);
+};
+
+// Quick, quiet pop sound for scrolling/swiping
+const playPopSound = () => {
+  if (!audioCtx || audioCtx.state === 'suspended') return;
+
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(400 + Math.random() * 200, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.05);
+
+  gain.gain.setValueAtTime(0.01, audioCtx.currentTime); // Very quiet
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.05);
 };
 
 // Highly optimized AcidTrails using direct DOM manipulation to prevent React re-renders
@@ -127,6 +147,26 @@ const App: React.FC = () => {
   useEffect(() => {
     window.addEventListener('click', playFunnySound);
     return () => window.removeEventListener('click', playFunnySound);
+  }, []);
+
+  // Scroll and Swipe sounds
+  useEffect(() => {
+    let lastSoundTime = 0;
+    const handleScrollOrSwipe = () => {
+      const now = Date.now();
+      if (now - lastSoundTime > 150) { // Play sound max every 150ms
+        lastSoundTime = now;
+        playPopSound();
+      }
+    };
+
+    window.addEventListener('scroll', handleScrollOrSwipe, { passive: true });
+    window.addEventListener('touchmove', handleScrollOrSwipe, { passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', handleScrollOrSwipe);
+      window.removeEventListener('touchmove', handleScrollOrSwipe);
+    };
   }, []);
 
   const handleAddToCart = useCallback((product: Product) => {
