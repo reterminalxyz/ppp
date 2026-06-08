@@ -1,5 +1,5 @@
 import React from 'react';
-import { products } from './data';
+import { products } from '../data';
 
 interface Props {
   isOpen: boolean;
@@ -9,6 +9,7 @@ interface Props {
 export const Gallery: React.FC<Props> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
+  // Use reduce instead of flatMap for better compatibility
   const allImages = products.reduce((acc, p) => {
     return acc.concat(p.images.map(img => ({ url: img, name: p.name })));
   }, [] as { url: string, name: string }[]);
