@@ -31,112 +31,93 @@ const playSwipeSound = (speed: number) => {
  osc.stop(swipeAudioCtx.currentTime + 0.1);
 };
 
-// Голографический неоновый кактус (Wireframe)
-const HologramCactusSVG = ({ className, color }: { className?: string, color: string }) => (
- <svg viewBox="0 0 400 600" className={`w-full h-full ${className}`} preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-   <filter id={`glow-${color}`}>
-    <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
-    <feMerge>
-     <feMergeNode in="coloredBlur"/>
-     <feMergeNode in="SourceGraphic"/>
-    </feMerge>
-   </filter>
-  </defs>
-
-  <g filter={`url(#glow-${color})`} stroke={color} fill="none" strokeWidth="4" strokeLinecap="round">
-   {/* Центральный ствол (внешний контур) */}
-   <rect x="150" y="100" width="100" height="400" rx="50" />
-    
-   {/* Внутренние линии ствола для объема */}
-   <line x1="180" y1="100" x2="180" y2="500" strokeWidth="2" opacity="0.6" />
-   <line x1="220" y1="100" x2="220" y2="500" strokeWidth="2" opacity="0.6" />
-   <line x1="200" y1="100" x2="200" y2="500" strokeWidth="2" opacity="0.8" />
-
-   {/* Левая рука */}
-   <path d="M 150 320 C 50 320, 50 150, 100 150 C 130 150, 140 200, 150 250" />
-   <path d="M 150 290 C 80 290, 80 180, 100 180 C 115 180, 120 210, 150 230" strokeWidth="2" opacity="0.6"/>
-
-   {/* Правая рука */}
-   <path d="M 250 380 C 350 380, 350 200, 300 200 C 270 200, 260 250, 250 300" />
-   <path d="M 250 350 C 320 350, 320 230, 300 230 C 285 230, 280 260, 250 280" strokeWidth="2" opacity="0.6"/>
-
-   {/* Декоративные кольца (Голографические сканеры) */}
-   <ellipse cx="200" cy="450" rx="140" ry="30" stroke="#00FFFF" strokeWidth="3" strokeDasharray="10 15" />
-   <ellipse cx="200" cy="150" rx="100" ry="20" stroke="#FF1493" strokeWidth="3" strokeDasharray="5 10" />
-    
-   {/* Глаз / Ядро */}
-   <ellipse cx="200" cy="250" rx="30" ry="15" stroke="#FF8C00" strokeWidth="4" />
-   <circle cx="200" cy="250" r="5" fill="#FF8C00" />
-  </g>
- </svg>
-);
-
 export const InteractiveHero: React.FC = () => {
  const containerRef = useRef<HTMLDivElement>(null);
- const objectRef = useRef<HTMLDivElement>(null);
   
- // Состояние вращения (добавлен небольшой начальный наклон по X для подчеркивания 3D объема)
- const manualRotation = useRef({ x: -10, y: 0 });
- const isDragging = useRef(false);
+ // Состояние для параллакс-эффекта (от -1 до 1)
+ const [offset, setOffset] = useState({ x: 0, y: 0 });
  const lastPos = useRef({ x: 0, y: 0 });
  const lastSoundTime = useRef(0);
+ const [orientationPermission, setOrientationPermission] = useState<boolean | null>(null);
 
- // Обработка мыши (Десктоп - легкий наклон при наведении)
- const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-  if (isDragging.current || !containerRef.current || !objectRef.current) return;
+ // Инициализация гироскопа (DeviceOrientation)
+ useEffect(() => {
+  // Автоматически разрешаем для устройств, не требующих явного запроса (Android, старые iOS)
+  if (typeof (DeviceOrientationEvent as any).requestPermission !== 'function') {
+   setOrientationPermission(true);
+  }
+ }, []);
+
+ useEffect(() => {
+  if (!orientationPermission) return;
+
+  const handleOrientation = (event: DeviceOrientationEvent) => {
+   let { beta, gamma } = event;
+   if (beta === null || gamma === null) return;
+
+   // Обработка ландшафтной ориентации
+   const orientation = window.screen?.orientation?.angle || window.orientation || 0;
+   if (orientation === 90) {
+    const temp = beta;
+    beta = -gamma;
+    gamma = temp;
+   } else if (orientation === -90) {
+    const temp = beta;
+    beta = gamma;
+    gamma = -temp;
+   }
+
+   // Нормализация значений:
+   // gamma (наклон влево/вправо): от -30 до 30 градусов
+   // beta (наклон вперед/назад): от 15 до 75 градусов (предполагаем, что 45 - это нейтральное положение в руке)
+   let x = gamma / 30;
+   let y = (beta - 45) / 30;
+
+   // Ограничиваем от -1 до 1
+   x = Math.max(-1, Math.min(1, x));
+   y = Math.max(-1, Math.min(1, y));
+
+   setOffset({ x, y });
+  };
+
+  window.addEventListener('deviceorientation', handleOrientation);
+  return () => window.removeEventListener('deviceorientation', handleOrientation);
+ }, [orientationPermission]);
+
+ const requestOrientationPermission = async () => {
+  if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+   try {
+    const permissionState = await (DeviceOrientationEvent as any).requestPermission();
+    if (permissionState === 'granted') {
+     setOrientationPermission(true);
+    }
+   } catch (error) {
+    console.error('Error requesting device orientation permission:', error);
+   }
+  }
+ };
+
+ const handleMove = (clientX: number, clientY: number) => {
+  if (!containerRef.current) return;
    
   const rect = containerRef.current.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
+  
+  // Нормализуем координаты от -1 до 1 относительно центра контейнера
+  const x = ((clientX - rect.left) / rect.width - 0.5) * 2;
+  const y = ((clientY - rect.top) / rect.height - 0.5) * 2;
    
-  const centerX = rect.width / 2;
-  const centerY = rect.height / 2;
-   
-  const rotateX = ((y - centerY) / centerY) * -20; 
-  const rotateY = ((x - centerX) / centerX) * 20;
-
-  objectRef.current.style.transform = `rotateX(${rotateX + manualRotation.current.x}deg) rotateY(${rotateY + manualRotation.current.y}deg)`;
- };
-
- const handleMouseLeave = () => {
-  if (isDragging.current || !objectRef.current) return;
-  objectRef.current.style.transform = `rotateX(${manualRotation.current.x}deg) rotateY(${manualRotation.current.y}deg)`;
- };
-
- // Обработка свайпов и перетаскивания (Мобилки и Десктоп)
- const handlePointerDown = (e: React.TouchEvent | React.MouseEvent) => {
-  isDragging.current = true;
-  const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
-  const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
-  lastPos.current = { x: clientX, y: clientY };
- };
-
- const handlePointerMove = (e: TouchEvent | MouseEvent) => {
-  if (!isDragging.current || !objectRef.current) return;
-   
-  if ('touches' in e) {
-   e.preventDefault(); // Блокируем скролл страницы при вращении кактуса
+  // Если гироскоп активен, мышь/тач добавляют смещение к гироскопу, иначе полностью управляют
+  if (!orientationPermission) {
+   setOffset({ x, y });
   }
 
-  const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
-  const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
-
+  // Логика звука свайпа
   const deltaX = clientX - lastPos.current.x;
   const deltaY = clientY - lastPos.current.y;
-
-  // Ограничиваем вращение по оси X (вверх/вниз), чтобы модель не переворачивалась вверх ногами
-  const newRotX = Math.max(-30, Math.min(30, manualRotation.current.x - deltaY * 0.6));
-  // Вращение по оси Y (влево/вправо) бесконечное
-  const newRotY = manualRotation.current.y + deltaX * 0.6;
-
-  manualRotation.current = { x: newRotX, y: newRotY };
-  objectRef.current.style.transform = `rotateX(${newRotX}deg) rotateY(${newRotY}deg)`;
-
-  // Воспроизведение звука при быстром свайпе
   const speed = Math.abs(deltaX) + Math.abs(deltaY);
   const now = Date.now();
-  if (speed > 5 && now - lastSoundTime.current > 100) {
+  
+  if (speed > 10 && now - lastSoundTime.current > 100) {
    playSwipeSound(speed);
    lastSoundTime.current = now;
   }
@@ -144,106 +125,202 @@ export const InteractiveHero: React.FC = () => {
   lastPos.current = { x: clientX, y: clientY };
  };
 
- const handlePointerUp = () => {
-  isDragging.current = false;
+ const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+  handleMove(e.clientX, e.clientY);
  };
 
- useEffect(() => {
-  const container = containerRef.current;
-  if (!container) return;
+ const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+  if (e.touches.length > 0) {
+   handleMove(e.touches[0].clientX, e.touches[0].clientY);
+  }
+ };
 
-  container.addEventListener('touchmove', handlePointerMove, { passive: false });
-  container.addEventListener('mousemove', handlePointerMove);
-  window.addEventListener('touchend', handlePointerUp);
-  window.addEventListener('mouseup', handlePointerUp);
+ const handleInteractionStart = () => {
+  // Запрашиваем права на гироскоп при первом касании (для iOS 13+)
+  if (orientationPermission === null) {
+   requestOrientationPermission();
+  }
+ };
 
-  return () => {
-   container.removeEventListener('touchmove', handlePointerMove);
-   container.removeEventListener('mousemove', handlePointerMove);
-   window.removeEventListener('touchend', handlePointerUp);
-   window.removeEventListener('mouseup', handlePointerUp);
-  };
- }, []);
-
- // 6 плоскостей создают идеальную голографическую 3D иллюзию
- const planes = [
-  { deg: 0, color: '#39FF14' },  // Зеленый
-  { deg: 30, color: '#00FFFF' }, // Циан
-  { deg: 60, color: '#FF1493' }, // Розовый
-  { deg: 90, color: '#39FF14' }, // Зеленый
-  { deg: 120, color: '#00FFFF' }, // Циан
-  { deg: 150, color: '#FF1493' } // Розовый
- ];
+ const handleMouseLeave = () => {
+  // Плавный возврат в центр, если гироскоп не активен
+  if (!orientationPermission) {
+   setOffset({ x: 0, y: 0 });
+  }
+ };
 
  return (
   <div 
-   className="relative w-full h-[70vh] md:h-[85vh] overflow-hidden border-b-4 border-mex-pink bg-mex-dark touch-none"
+   className="relative w-full h-[70vh] md:h-[85vh] overflow-hidden border-b-4 border-mex-pink bg-mex-dark flex items-center justify-center"
+   onMouseMove={handleMouseMove}
+   onMouseLeave={handleMouseLeave}
+   onTouchMove={handleTouchMove}
+   onTouchStart={handleInteractionStart}
+   onMouseDown={handleInteractionStart}
+   ref={containerRef}
   >
-   {/* Окружающее свечение (вынесено из 3D контекста для фикса багов Safari) */}
-   <div className="absolute -top-10 -left-10 w-40 h-40 md:w-64 md:h-64 bg-mex-pink mix-blend-screen rounded-full blur-[60px] md:blur-[90px] animate-pulse z-0"></div>
-   <div className="absolute -bottom-10 -right-10 w-48 h-48 md:w-72 md:h-72 bg-mex-orange mix-blend-screen rounded-full blur-[70px] md:blur-[100px] animate-pulse z-0" style={{ animationDelay: '1s' }}></div>
+   {/* Встроенные стили для плавной анимации левитации */}
+   <style>{`
+    @keyframes float-slow {
+     0%, 100% { transform: translateY(0px); }
+     50% { transform: translateY(-15px); }
+    }
+    .animate-float {
+     animation: float-slow 6s ease-in-out infinite;
+    }
+   `}</style>
 
-   {/* 3D Контейнер (без overflow-hidden, чтобы не ломать 3D в Safari/WebKit) */}
-   <div
-    className="absolute inset-0 flex items-center justify-center z-10"
-    style={{ 
-     perspective: '800px', 
-     WebkitPerspective: '800px',
-     transformStyle: 'preserve-3d',
-     WebkitTransformStyle: 'preserve-3d'
-    }}
-    onMouseMove={handleMouseMove}
-    onMouseLeave={handleMouseLeave}
-    onTouchStart={handlePointerDown}
-    onMouseDown={handlePointerDown}
-    ref={containerRef}
-   >
-    {/* Контейнер 3D объекта */}
-    <div 
-     ref={objectRef}
-     className="relative flex items-center justify-center transition-transform duration-75 ease-out w-full h-full"
-     style={{ 
-      transformStyle: 'preserve-3d', 
-      WebkitTransformStyle: 'preserve-3d',
-      willChange: 'transform',
-      transform: `rotateX(-10deg) rotateY(0deg)`
-     }}
-    >
-     {/* 
-      Анимация постоянного вращения + ручное вращение.
-      Используем aspect-ratio и высоту в vh, чтобы объект не сплющивался на мобильных.
-     */}
-     <div 
-      className="relative h-[55vh] max-h-[600px] aspect-[2/3] animate-spin-3d flex-shrink-0" 
-      style={{ 
-       transformStyle: 'preserve-3d',
-       WebkitTransformStyle: 'preserve-3d'
-      }}
+   {/* Фоновые неоновые пятна (двигаются в противоположную сторону) */}
+   <div 
+    className="absolute w-64 h-64 md:w-96 md:h-96 bg-mex-pink mix-blend-screen rounded-full blur-[80px] md:blur-[120px] opacity-50 transition-transform duration-500 ease-out"
+    style={{ transform: `translate(${offset.x * -30}px, ${offset.y * -30}px)` }}
+   />
+   <div 
+    className="absolute w-72 h-72 md:w-[400px] md:h-[400px] bg-mex-orange mix-blend-screen rounded-full blur-[90px] md:blur-[130px] opacity-40 transition-transform duration-500 ease-out"
+    style={{ transform: `translate(${offset.x * 40}px, ${offset.y * 40}px)` }}
+   />
+
+   {/* Главный SVG Контейнер (Широкий ViewBox для трех кактусов) */}
+   <div className="relative w-full max-w-5xl h-full animate-float z-10 pointer-events-none p-4">
+    <svg viewBox="0 0 800 600" className="w-full h-full overflow-visible" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+     <defs>
+      {/* Градиенты */}
+      <linearGradient id="sunGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+       <stop offset="0%" stopColor="#FF1493" />
+       <stop offset="100%" stopColor="#FF8C00" />
+      </linearGradient>
+      <linearGradient id="cac1Grad" x1="0%" y1="0%" x2="0%" y2="100%">
+       <stop offset="0%" stopColor="#39FF14" />
+       <stop offset="100%" stopColor="#00FFFF" />
+      </linearGradient>
+      <linearGradient id="cac2Grad" x1="0%" y1="0%" x2="0%" y2="100%">
+       <stop offset="0%" stopColor="#FF1493" />
+       <stop offset="100%" stopColor="#FF8C00" />
+      </linearGradient>
+      <linearGradient id="cac3Grad" x1="0%" y1="0%" x2="0%" y2="100%">
+       <stop offset="0%" stopColor="#00FFFF" />
+       <stop offset="100%" stopColor="#8A2BE2" />
+      </linearGradient>
+      
+      {/* Фильтры свечения */}
+      <filter id="glow-strong" x="-20%" y="-20%" width="140%" height="140%">
+       <feGaussianBlur stdDeviation="12" result="blur" />
+       <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+       </feMerge>
+      </filter>
+      <filter id="glow-soft" x="-20%" y="-20%" width="140%" height="140%">
+       <feGaussianBlur stdDeviation="6" result="blur" />
+       <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+       </feMerge>
+      </filter>
+     </defs>
+
+     {/* СЛОЙ 1: Vaporwave Солнце (Дальний фон, двигается медленно и инвертированно) */}
+     <g 
+      style={{ transform: `translate(${offset.x * -10}px, ${offset.y * -10}px)` }} 
+      className="transition-transform duration-300 ease-out"
      >
-      {planes.map((plane, index) => (
-       <div 
-        key={index} 
-        className="absolute inset-0" 
-        style={{ 
-         transform: `rotateY(${plane.deg}deg)`, 
-         WebkitTransform: `rotateY(${plane.deg}deg)`,
-         mixBlendMode: 'screen',
-         backfaceVisibility: 'visible',
-         WebkitBackfaceVisibility: 'visible',
-         transformStyle: 'preserve-3d',
-         WebkitTransformStyle: 'preserve-3d'
-        }}
-       >
-        <HologramCactusSVG color={plane.color} />
-       </div>
-      ))}
-     </div>
-    </div>
+      <circle cx="400" cy="350" r="180" fill="url(#sunGrad)" filter="url(#glow-soft)" opacity="0.85" />
+      {/* Полосы на солнце */}
+      <line x1="200" y1="320" x2="600" y2="320" stroke="#1A0B0C" strokeWidth="4" />
+      <line x1="200" y1="360" x2="600" y2="360" stroke="#1A0B0C" strokeWidth="8" />
+      <line x1="200" y1="410" x2="600" y2="410" stroke="#1A0B0C" strokeWidth="14" />
+      <line x1="200" y1="470" x2="600" y2="470" stroke="#1A0B0C" strokeWidth="24" />
+     </g>
+
+     {/* СЛОЙ 2: Левый кактус (Opuntia / Опунция) - Задний план */}
+     <g 
+      style={{ transform: `translate(${offset.x * 15}px, ${offset.y * 15}px)` }} 
+      className="transition-transform duration-200 ease-out"
+     >
+      {/* Тело */}
+      <ellipse cx="250" cy="450" rx="40" ry="90" stroke="url(#cac2Grad)" strokeWidth="10" fill="none" filter="url(#glow-soft)" />
+      <ellipse cx="180" cy="320" rx="45" ry="60" transform="rotate(-25 180 320)" stroke="url(#cac2Grad)" strokeWidth="10" fill="none" filter="url(#glow-soft)" />
+      <ellipse cx="310" cy="280" rx="35" ry="50" transform="rotate(30 310 280)" stroke="url(#cac2Grad)" strokeWidth="10" fill="none" filter="url(#glow-soft)" />
+      <ellipse cx="140" cy="200" rx="25" ry="40" transform="rotate(-45 140 200)" stroke="url(#cac2Grad)" strokeWidth="10" fill="none" filter="url(#glow-soft)" />
+      
+      {/* Внутренние линии для объема */}
+      <ellipse cx="250" cy="450" rx="20" ry="70" stroke="#FFF" strokeWidth="3" fill="none" opacity="0.6" />
+      <ellipse cx="180" cy="320" rx="20" ry="40" transform="rotate(-25 180 320)" stroke="#FFF" strokeWidth="2" fill="none" opacity="0.6" />
+      
+      {/* Парящий глаз */}
+      <circle cx="180" cy="320" r="8" fill="#00FFFF" className="animate-pulse" filter="url(#glow-strong)" />
+      <circle cx="310" cy="280" r="6" fill="#39FF14" className="animate-ping" />
+     </g>
+
+     {/* СЛОЙ 3: Правый кактус (Columnar / Спиральный) - Средний план */}
+     <g 
+      style={{ transform: `translate(${offset.x * 25}px, ${offset.y * 25}px)` }} 
+      className="transition-transform duration-150 ease-out"
+     >
+      {/* Основные изгибы */}
+      <path d="M550,550 Q510,400 570,250 T550,50" stroke="url(#cac3Grad)" strokeWidth="22" fill="none" strokeLinecap="round" filter="url(#glow-soft)" />
+      <path d="M550,550 Q510,400 570,250 T550,50" stroke="#FFF" strokeWidth="5" fill="none" strokeLinecap="round" opacity="0.8" />
+      
+      <path d="M600,500 Q570,380 620,260 T600,100" stroke="url(#cac3Grad)" strokeWidth="14" fill="none" strokeLinecap="round" filter="url(#glow-soft)" />
+      <path d="M600,500 Q570,380 620,260 T600,100" stroke="#FFF" strokeWidth="3" fill="none" strokeLinecap="round" opacity="0.6" />
+      
+      {/* Неоновые кольца-сканеры */}
+      <ellipse cx="560" cy="150" rx="45" ry="12" stroke="#39FF14" strokeWidth="4" fill="none" transform="rotate(-15 560 150)" filter="url(#glow-strong)" />
+      <ellipse cx="560" cy="350" rx="55" ry="15" stroke="#FF1493" strokeWidth="4" fill="none" transform="rotate(10 560 350)" filter="url(#glow-strong)" />
+     </g>
+
+     {/* СЛОЙ 4: Центральный кактус (Saguaro) - Передний план */}
+     <g 
+      style={{ transform: `translate(${offset.x * 40}px, ${offset.y * 40}px)` }} 
+      className="transition-transform duration-100 ease-out"
+     >
+      {/* Абстрактная аура */}
+      <path d="M400,550 C350,400 450,300 400,100" stroke="#00FFFF" strokeWidth="45" strokeLinecap="round" fill="none" filter="url(#glow-strong)" opacity="0.2" />
+      
+      {/* Центральный ствол */}
+      <path d="M400,550 C370,400 430,300 400,100 C370,20 430,20 400,20" stroke="url(#cac1Grad)" strokeWidth="18" strokeLinecap="round" fill="none" filter="url(#glow-soft)" />
+      <path d="M400,550 C370,400 430,300 400,100 C370,20 430,20 400,20" stroke="#FFF" strokeWidth="5" strokeLinecap="round" fill="none" opacity="0.9" />
+      
+      {/* Левая рука */}
+      <path d="M400,400 C310,400 270,300 300,200" stroke="url(#cac1Grad)" strokeWidth="14" strokeLinecap="round" fill="none" filter="url(#glow-soft)" />
+      <path d="M400,400 C310,400 270,300 300,200" stroke="#FFF" strokeWidth="4" strokeLinecap="round" fill="none" opacity="0.9" />
+      
+      {/* Правая рука */}
+      <path d="M400,320 C490,320 530,210 500,110" stroke="url(#cac1Grad)" strokeWidth="14" strokeLinecap="round" fill="none" filter="url(#glow-soft)" />
+      <path d="M400,320 C490,320 530,210 500,110" stroke="#FFF" strokeWidth="4" strokeLinecap="round" fill="none" opacity="0.9" />
+
+      {/* Психоделичные глаза / Ядра */}
+      <ellipse cx="400" cy="180" rx="25" ry="40" stroke="#FF1493" strokeWidth="4" fill="none" filter="url(#glow-soft)" />
+      <circle cx="400" cy="180" r="8" fill="#FF8C00" className="animate-ping" />
+      
+      <circle cx="300" cy="200" r="15" stroke="#FF8C00" strokeWidth="3" fill="none" filter="url(#glow-soft)" />
+      <circle cx="300" cy="200" r="5" fill="#39FF14" className="animate-pulse" />
+
+      <circle cx="500" cy="110" r="15" stroke="#FF8C00" strokeWidth="3" fill="none" filter="url(#glow-soft)" />
+      <circle cx="500" cy="110" r="5" fill="#39FF14" className="animate-pulse" />
+     </g>
+
+     {/* СЛОЙ 5: Парящие глитч-элементы (Самый передний план, двигаются быстрее всего) */}
+     <g 
+      style={{ transform: `translate(${offset.x * 60}px, ${offset.y * 60}px)` }} 
+      className="transition-transform duration-75 ease-out"
+     >
+      {/* Звезды / Кресты */}
+      <path d="M150,150 L160,180 L190,190 L160,200 L150,230 L140,200 L110,190 L140,180 Z" fill="#39FF14" filter="url(#glow-soft)" className="animate-spin" style={{ transformOrigin: '150px 190px', animationDuration: '5s' }} />
+      <path d="M650,100 L655,120 L675,125 L655,130 L650,150 L645,130 L625,125 L645,120 Z" fill="#FF1493" filter="url(#glow-soft)" className="animate-bounce" style={{ animationDuration: '3s' }} />
+      
+      {/* Глитч-линии */}
+      <rect x="250" y="500" width="80" height="4" fill="#00FFFF" opacity="0.8" className="animate-pulse" />
+      <rect x="500" y="450" width="40" height="6" fill="#FF1493" opacity="0.8" className="animate-pulse" style={{ animationDelay: '0.4s' }} />
+      <rect x="350" y="80" width="50" height="3" fill="#39FF14" opacity="0.8" className="animate-pulse" style={{ animationDelay: '0.8s' }} />
+     </g>
+    </svg>
    </div>
     
-   {/* Подсказка для мобильных */}
-   <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-mex-green font-mono text-sm opacity-70 md:hidden pointer-events-none animate-pulse tracking-widest z-20">
-    [ SWIPE TO ROTATE ]
+   {/* Подсказка */}
+   <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-mex-green font-mono text-sm opacity-70 pointer-events-none animate-pulse tracking-widest z-20 whitespace-nowrap">
+    [ TILT DEVICE OR SWIPE ]
    </div>
   </div>
  );
