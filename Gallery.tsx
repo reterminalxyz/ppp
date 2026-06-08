@@ -1,15 +1,39 @@
-import React from 'react';
-import { products } from '../data';
+import React, { useState } from 'react';
+import { products } from './data';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
 }
 
+const GalleryImage = ({ url, name }: { url: string, name: string }) => {
+  const [error, setError] = useState(false);
+  const fallbackImage = "https://images.unsplash.com/photo-1519336305162-4b63d5030b86?auto=format&fit=crop&w=800&q=80";
+
+  return (
+    <div className="border-4 border-mex-orange p-2 bg-black group flex flex-col relative">
+      <div className="overflow-hidden aspect-square mb-4 flex-grow relative">
+        <img 
+          src={error ? fallbackImage : url} 
+          alt={name} 
+          loading="lazy" 
+          className={`w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 group-hover:hue-rotate-90 ${error ? 'opacity-50 grayscale' : ''}`}
+          onError={() => setError(true)}
+        />
+        {error && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+            <span className="text-mex-pink font-mono text-xs">LOCKED</span>
+          </div>
+        )}
+      </div>
+      <p className="text-mex-green font-mono text-sm text-center uppercase">{name}</p>
+    </div>
+  );
+};
+
 export const Gallery: React.FC<Props> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
-  // Use reduce instead of flatMap for better compatibility
   const allImages = products.reduce((acc, p) => {
     return acc.concat(p.images.map(img => ({ url: img, name: p.name })));
   }, [] as { url: string, name: string }[]);
@@ -26,12 +50,7 @@ export const Gallery: React.FC<Props> = ({ isOpen, onClose }) => {
       </div>
       <div className="p-8 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 max-w-7xl mx-auto">
         {allImages.map((img, idx) => (
-          <div key={idx} className="border-4 border-mex-orange p-2 bg-black group flex flex-col">
-            <div className="overflow-hidden aspect-square mb-4 flex-grow">
-              <img src={img.url} alt={img.name} loading="lazy" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 group-hover:hue-rotate-90" />
-            </div>
-            <p className="text-mex-green font-mono text-sm text-center uppercase">{img.name}</p>
-          </div>
+          <GalleryImage key={idx} url={img.url} name={img.name} />
         ))}
       </div>
     </div>
