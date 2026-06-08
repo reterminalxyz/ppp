@@ -1,6 +1,5 @@
 import { Product } from './types';
 
-// Helper to convert Google Drive file IDs to direct image links
 const getDriveImageUrl = (id: string) => `https://drive.google.com/thumbnail?id=${id}&sz=w800`;
 
 export const products: Product[] = [
