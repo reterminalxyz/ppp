@@ -1,6 +1,9 @@
 import { Product } from './types';
 
-const getDriveImageUrl = (id: string) => `https://drive.google.com/thumbnail?id=${id}&sz=w800`;
+// В онлайн-песочнице нет локальной папки для картинок.
+// Поэтому мы используем специальный скрытый API Google Drive (lh3.googleusercontent.com),
+// который позволяет встраивать картинки напрямую без ошибок CORS!
+const getDriveImageUrl = (id: string) => `https://lh3.googleusercontent.com/d/${id}`;
 
 export const products: Product[] = [
   {
