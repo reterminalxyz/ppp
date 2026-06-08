@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Product } from '../types';
+import { Product } from './types';
 
 interface Props {
   product: Product;
@@ -22,23 +22,26 @@ export const ProductCard: React.FC<Props> = ({ product, onAddToCart }) => {
     setImageError(false);
   };
 
+  // Заглушка
+  const fallbackImage = "https://images.unsplash.com/photo-1519336305162-4b63d5030b86?auto=format&fit=crop&w=800&q=80";
+
   return (
     <div className="group relative bg-mex-dark border-4 border-mex-red p-4 transition-all duration-300 hover:-translate-y-2 hover:shadow-solid-pink flex flex-col h-full">
       {/* Image Container */}
       <div className="border-2 border-mex-orange mb-4 relative overflow-hidden">
         <div className="relative overflow-hidden aspect-square group/gallery bg-black flex items-center justify-center">
-          {!imageError ? (
-            <img 
-              src={product.images[currentImageIndex]} 
-              alt={`${product.name} - view ${currentImageIndex + 1}`} 
-              loading="lazy"
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 group-hover:hue-rotate-90"
-              onError={() => setImageError(true)}
-            />
-          ) : (
-            <div className="text-center p-4 border-2 border-dashed border-mex-pink text-mex-pink font-mono text-sm">
-              <p>IMAGE_LOAD_ERROR</p>
-              <p className="text-xs mt-2 opacity-70">Check Google Drive sharing permissions (Must be "Anyone with link").</p>
+          <img 
+            src={imageError ? fallbackImage : product.images[currentImageIndex]} 
+            alt={`${product.name} - view ${currentImageIndex + 1}`} 
+            loading="lazy"
+            className={`w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 group-hover:hue-rotate-90 ${imageError ? 'opacity-50 grayscale' : ''}`}
+            onError={() => setImageError(true)}
+          />
+          
+          {imageError && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center bg-black/60 backdrop-blur-sm">
+              <p className="text-mex-pink font-mono font-bold text-lg mb-2">IMAGE_LOCKED</p>
+              <p className="text-white text-xs font-sans">Google Drive access denied.<br/>Please set folder to "Anyone with link".</p>
             </div>
           )}
           
