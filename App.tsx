@@ -197,19 +197,19 @@ const App: React.FC = () => {
    <AcidTrails />
     
    {/* Navigation - Optimized for Mobile */}
-   <nav className="fixed top-0 w-full z-30 bg-mex-dark/90 backdrop-blur-md border-b-2 border-mex-orange p-3 sm:p-4 flex justify-between items-center">
-    <div className="text-mex-orange font-display text-lg sm:text-2xl md:text-4xl tracking-wide uppercase drop-shadow-[0_0_8px_rgba(255,140,0,0.8)] flex-1 mr-2 leading-none">
+   <nav className="fixed top-0 w-full z-30 bg-mex-dark/90 backdrop-blur-md border-b-2 border-mex-orange p-3 sm:p-4 flex justify-between items-center gap-2">
+    <div className="text-mex-orange font-display text-2xl sm:text-3xl md:text-5xl tracking-wide uppercase drop-shadow-[0_0_8px_rgba(255,140,0,0.8)] flex-1 leading-none break-words">
      <span className="glitch-occasional" data-text={headerText + "_"}>
       {headerText}
       <span className="animate-pulse">_</span>
      </span>
     </div>
      
-    <div className="flex items-center gap-3 sm:gap-6">
+    <div className="flex items-center gap-3 sm:gap-6 flex-shrink-0">
      {/* Cart Button */}
      <button 
       onClick={() => setIsCartOpen(true)}
-      className="text-mex-pink font-bold font-mono text-xs sm:text-sm md:text-xl hover:text-mex-green transition-colors drop-shadow-[0_0_5px_currentColor] whitespace-nowrap"
+      className="text-mex-pink font-bold font-mono text-sm sm:text-lg md:text-2xl hover:text-mex-green transition-colors drop-shadow-[0_0_5px_currentColor] whitespace-nowrap"
      >
       CART [{cartItemCount}]
      </button>
@@ -241,7 +241,7 @@ const App: React.FC = () => {
    </nav>
 
    {/* Main Content */}
-   <main className="pt-16 sm:pt-24">
+   <main className="pt-24 sm:pt-32">
     <InteractiveHero />
 
     {/* Marquee Divider */}
